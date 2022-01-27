@@ -19,7 +19,7 @@ import '@tensorflow/tfjs-backend-webgl';
 
 ```html
 <!-- Import @tensorflow/tfjs-core -->
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js"> </script>
 
 <!-- Adds the WebGL backend to the global backend registry -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
