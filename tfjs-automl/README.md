@@ -12,7 +12,7 @@ npm i @tensorflow/tfjs-automl
 
 If you are using CDN:
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-automl"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js"> </script>
 ```
 
 We support the following types of AutoML Edge models:
