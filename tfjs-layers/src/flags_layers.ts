@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2021 Google LLC. All Rights Reserved.
+ * Copyright 2022 Google LLC. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,12 +15,12 @@
  * =============================================================================
  */
 
-export const MAX_COMPUTE_WORKGROUP_INVOCATIONS = 256;
+import {env} from '@tensorflow/tfjs-core';
 
-export const MAX_COMPUTE_PER_DIMENSION_DISPATCH_SIZE = 65535;
+import {updateCacheMaxEntries} from './engine/executor';
 
-export const MAX_COMPUTE_WORKGROUP_SIZE_X = 256;
+export const ENV = env();
 
-export const MAX_COMPUTE_WORKGROUP_SIZE_Y = 256;
-
-export const MAX_COMPUTE_WORKGROUP_SIZE_Z = 256;
+/** The max number of entries for the caches of layers' topological sort. */
+ENV.registerFlag(
+    'TOPOLOGICAL_SORT_CACHE_MAX_ENTRIES', () => 100, updateCacheMaxEntries);

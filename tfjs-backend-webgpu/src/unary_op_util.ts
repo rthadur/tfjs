@@ -28,7 +28,6 @@ export enum UnaryOpType {
   LOG,
   LOGICAL_NOT,
   NEG,
-  PRELU,
   RELU,
   RELU6,
   LEAKYRELU,
@@ -74,29 +73,17 @@ const LOG = `if (a < 0.0) { return 1.0/0.0; }
   return log(a);`;
 const LOGICAL_NOT = `return f32(!(a >= 1.0));`;
 const NEG = `return -a;`;
-const PRELU = `return (a < 0.0) ? b * a : a;`;
 const LEAKYRELU = `if (a < 0.0) { return uniforms.alpha * a; } return a;`;
-const RELU = `if(a < 0.0) { return 0.0; } return a;`;
+const LEAKYRELU_VEC4 = `
+  let aLessThanZero = vec4<f32>(a < vec4<f32>(0.0));
+  return (aLessThanZero * (uniforms.alpha * a)) + ((vec4<f32>(1.0) - aLessThanZero) * a);
+`;
+const RELU = `return select(a, 0.0, a < 0.0);`;
 const RELU6 = 'return clamp(a, 0.0, 6.0);';
 const RELU6_VEC4 =
     'return clamp(a, vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(6.0, 6.0, 6.0, 6.0));';
 const RELU_VEC4 = `
-  var resFloat = a * vec4<f32>(a >= vec4<f32>(0.0));
-  let isNaN = isNanCustomVec4(a);
-
-  if (isNaN.r) {
-    resFloat.r = a.r;
-  }
-  if (isNaN.g) {
-    resFloat.g = a.g;
-  }
-  if (isNaN.b) {
-    resFloat.b = a.b;
-  }
-  if (isNaN.a) {
-    resFloat.a = a.a;
-  }
-  return resFloat;
+  return select(a, vec4<f32>(0.0), a < vec4<f32>(0.0));
 `;
 const RSQRT = `return 1.0/sqrt(a);`;
 const SIGMOID = `return 1.0 / (1.0 + exp(-1.0 * a));`;
@@ -139,10 +126,8 @@ export function getUnaryOpString(type: UnaryOpType, useVec4?: boolean): string {
       return LOGICAL_NOT;
     case UnaryOpType.NEG:
       return NEG;
-    case UnaryOpType.PRELU:
-      return PRELU;
     case UnaryOpType.LEAKYRELU:
-      return LEAKYRELU;
+      return useVec4 ? LEAKYRELU_VEC4 : LEAKYRELU;
     case UnaryOpType.RELU:
       return useVec4 ? RELU_VEC4 : RELU;
     case UnaryOpType.RELU6:

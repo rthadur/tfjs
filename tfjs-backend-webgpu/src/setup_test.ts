@@ -26,24 +26,10 @@ import './backend_webgpu_test_registry';
 import {parseTestEnvFromKarmaFlags, setTestEnvs, setupTestFilters, TEST_ENVS, TestFilter} from '@tensorflow/tfjs-core/dist/jasmine_util';
 
 const TEST_FILTERS: TestFilter[] = [
-  // skip test cases include 5D, 6D, gradients webgpu
-  {
-    include: '5D',
-    excludes: [
-      'webgpu '
-    ],
-  },
-  {
-    include: '6D',
-    excludes: [
-      'webgpu '
-    ],
-  },
+  // skip test cases include gradients webgpu
   {
     include: 'gradients webgpu',
-    excludes: [
-      'webgpu '
-    ],
+    excludes: ['webgpu '],
   },
 
   // skip specific test cases for supported kernels
@@ -57,7 +43,7 @@ const TEST_FILTERS: TestFilter[] = [
   {
     startsWith: 'avgPool ',
     excludes: [
-      'gradient',   // Not yet implemented.
+      'gradient',  // Not yet implemented.
       //'avgPool3d',  // Not yet implemented.
     ]
   },
@@ -79,7 +65,24 @@ const TEST_FILTERS: TestFilter[] = [
   {
     startsWith: 'conv2d ',
     excludes: [
-      'NCHW',      // Not yet implemented.
+      'gradient',  // gradient function not found.
+    ]
+  },
+  {
+    startsWith: 'cumprod ',
+    excludes: [
+      'gradient',  // gradient function not found.
+    ]
+  },
+  {
+    startsWith: 'prod ',
+    excludes: [
+      'gradient',  // gradient function not found.
+    ]
+  },
+  {
+    startsWith: 'cumsum ',
+    excludes: [
       'gradient',  // gradient function not found.
     ]
   },
@@ -109,23 +112,20 @@ const TEST_FILTERS: TestFilter[] = [
     excludes: [
       'gradient x=[2,3,3,1] f=[2,2,1,1] s=1 p=0',  // conv2dDerInput not yet
                                                    // implemented
-      'backProp',   // Conv2DBackpropFilter not yet
-                    // implemented
-      'leakyrelu',  // Not yet implemented
+      'backProp',  // Conv2DBackpropFilter not yet
+                   // implemented
     ]
   },
   {
     startsWith: 'fused depthwiseConv2D ',
     excludes: [
-      'gradient',   // DepthwiseConv2dNativeBackpropInput
-      'leakyrelu',  // Not yet implemented
+      'gradient',  // DepthwiseConv2dNativeBackpropInput
     ]
   },
   {
     startsWith: 'fused matmul ',
     excludes: [
-      'leakyrelu',  // Not yet implemented.
-      'gradient',   // Not yet implemented.
+      'gradient',  // Not yet implemented.
     ]
   },
   {
@@ -141,7 +141,6 @@ const TEST_FILTERS: TestFilter[] = [
       'has zero in its shape',           // Test times out.
       'valueAndGradients',               // backend.sum() not yet implemented.
       'upcasts when dtypes dont match',  // GLSL compilation failed
-      'broadcast',  // matmul broadcasting not yet implemented.
     ]
   },
   {
@@ -186,10 +185,13 @@ const TEST_FILTERS: TestFilter[] = [
   {
     startsWith: 'pool ',
     excludes: [
-      'avg x=[',                          // Unsupported 6D shape.
-      'max x=[4,3,1] f=[2,2] s=1 d=2',    // Unsupported 6D shape.
-      'max x=[2,4,4,1] f=[2,2] s=1 d=2',  // Unsupported 6D shape.
       'poolBackprop',  // maxPoolBackprop not yet implemented.
+    ]
+  },
+  {
+    startsWith: 'prod ',
+    excludes: [
+      'gradients',  // Not yet implemented
     ]
   },
   {
@@ -296,7 +298,6 @@ const TEST_FILTERS: TestFilter[] = [
       'conv1d gradients',  // Conv2DBackpropFilter
       'conv3d ',
       'conv3dTranspose ',
-      'cumsum ',
       'decodeWeights ',
       'denseBincount ',
       'diag ',
@@ -314,6 +315,7 @@ const TEST_FILTERS: TestFilter[] = [
       'logSigmoid ',
       'logicalOr ',
       'logicalXor ',
+      'lowerBound',
       'maxPool3d ',
       'maxPool3dBackprop ',
       'maxPoolBackprop ',
@@ -332,6 +334,7 @@ const TEST_FILTERS: TestFilter[] = [
       'RFFT ',
       'round webgpu',
       'method otsu',  // round
+      'searchSorted',
       'selu ',
       'sign webgpu',
       'stft ',
@@ -348,6 +351,7 @@ const TEST_FILTERS: TestFilter[] = [
       'tan webgpu',
       'unique ',
       'unsortedSegmentSum ',
+      'upperBound',
       'valueAndGradients ',
     ]
   },

@@ -16,15 +16,14 @@
  */
 
 import {getMainHeaderAndGlobalIndexString} from './shader_preprocessor';
-import {computeDispatch, flatDispatchLayout} from './webgpu_util';
-
 import {WebGPUProgram} from './webgpu_program';
+import {computeDispatch, flatDispatchLayout} from './webgpu_util';
 
 export class ClipVec4Program implements WebGPUProgram {
   outputShape: number[];
   shaderKey: string;
   variableNames = ['A'];
-  uniforms = 'minVal : f32; maxVal : f32;';
+  uniforms = 'minVal : f32, maxVal : f32,';
   dispatchLayout: {x: number[]};
   dispatch: [number, number, number];
   workPerThread = 4;
@@ -48,7 +47,7 @@ export class ClipVec4Program implements WebGPUProgram {
           let value = getAByOutputIndex(index);
           var clampedValue : vec4<f32>;
           for (var i = 0; i < 4; i = i + 1) {
-            if (isNanCustom(value[i])) {
+            if (isnan(value[i])) {
               clampedValue[i] = value[i];
             } else {
               clampedValue[i] = clamp(value[i], uniforms.minVal, uniforms.maxVal);

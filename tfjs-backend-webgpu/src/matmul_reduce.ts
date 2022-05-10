@@ -17,11 +17,10 @@
 
 import {backend_util, TensorInfo} from '@tensorflow/tfjs-core';
 
-import {getMainHeaderString} from './shader_preprocessor';
-import {computeDispatch} from './webgpu_util';
-
 import {mapActivationToShaderProgram} from './activation_util';
+import {getMainHeaderString} from './shader_preprocessor';
 import {WebGPUProgram} from './webgpu_program';
+import {computeDispatch} from './webgpu_util';
 
 export function makeMatMulReduceSource(): string {
   return `
@@ -64,18 +63,20 @@ export class MatMulReduceProgram implements WebGPUProgram {
   dispatchLayout: {x: number[], y: number[], z: number[]};
   dispatch: [number, number, number];
   variableNames = ['A', 'B'];
-  uniforms = `dimAOuter : i32; dimBOuter : i32; dimInner : i32;`;
+  uniforms = `dimAOuter : i32, dimBOuter : i32, dimInner : i32,`;
   workGroupSize: [number, number, number] = [256, 1, 1];
   transposeA: boolean;
   transposeB: boolean;
   addBias: boolean;
   activation: backend_util.Activation;
   hasPreluActivationWeights: boolean;
+  batchAEqualOne: boolean;
+  batchBEqualOne: boolean;
 
   constructor(
-      outputShape: [number, number, number], transposeA = false,
-      transposeB = false, bias: TensorInfo = null,
-      activation: backend_util.Activation = null,
+      outputShape: [number, number, number], batchAEqualOne: boolean,
+      batchBEqualOne: boolean, transposeA = false, transposeB = false,
+      bias: TensorInfo = null, activation: backend_util.Activation = null,
       preluActivationWeights: TensorInfo = null) {
     this.outputShape = outputShape;
     this.dispatchLayout = {x: [], y: [1, 2], z: [0]};
@@ -97,27 +98,29 @@ export class MatMulReduceProgram implements WebGPUProgram {
     this.addBias = addBias;
     this.activation = activation;
     this.hasPreluActivationWeights = hasPreluActivationWeights;
-    this.shaderKey =
-        `matMulReduce_${this.activation}_${transposeA}_${transposeB}`;
+    this.batchAEqualOne = batchAEqualOne;
+    this.batchBEqualOne = batchBEqualOne;
+    this.shaderKey = `matMulReduce_${this.activation}_${transposeA}_${
+        transposeB}_${this.batchAEqualOne}_${this.batchBEqualOne}`;
   }
 
   getUserCode(): string {
     let sampleA;
     if (this.transposeA === false) {
       sampleA =
-          `return A.numbers[batch * batchASize + row * uniforms.dimInner + col];`;
+          `return f32(A[batch * batchASize + row * uniforms.dimInner + col]);`;
     } else {
       sampleA =
-          `return A.numbers[batch * batchASize + col * uniforms.dimAOuter + row];`;
+          `return f32(A[batch * batchASize + col * uniforms.dimAOuter + row]);`;
     }
 
     let sampleB;
     if (this.transposeB === false) {
       sampleB =
-          `return B.numbers[batch * batchBSize + row * uniforms.dimBOuter + col];`;
+          `return f32(B[batch * batchBSize + row * uniforms.dimBOuter + col]);`;
     } else {
       sampleB =
-          `return B.numbers[batch * batchBSize + col * uniforms.dimInner + row];`;
+          `return f32(B[batch * batchBSize + col * uniforms.dimInner + row]);`;
     }
 
     let activationSnippet = '', applyActivationSnippet = '';
@@ -140,20 +143,35 @@ export class MatMulReduceProgram implements WebGPUProgram {
       applyActivationSnippet = 'value = activation(value, outCoord);';
     }
 
-    const addBiasSnippet = this.addBias ?
-        'value = value + getBiasByOutputCoords(outCoord);' :
-        '';
+    const addBiasSnippet =
+        this.addBias ? 'value = value + getBiasByOutputCoords(outCoord);' : '';
 
     const userCode = `
       ${activationSnippet}
 
-      fn mm_readA(batch: i32, row : i32, col : i32) -> f32 {
-        let batchASize = uniforms.aShape[1] * uniforms.aShape[2];
+      fn mm_readA(batchIn: i32, row : i32, col : i32) -> f32 {
+        ${
+        this.batchAEqualOne ? `
+          let batchASize = 0;
+          let batch = 0;
+          ` :
+                              `
+          let batchASize = uniforms.aShape[1] * uniforms.aShape[2];
+          let batch = batchIn;
+          `}
         ${sampleA}
       }
 
-      fn mm_readB(batch: i32, row : i32, col : i32) -> f32 {
-        let batchBSize = uniforms.bShape[1] * uniforms.bShape[2];
+      fn mm_readB(batchIn: i32, row : i32, col : i32) -> f32 {
+        ${
+        this.batchBEqualOne ? `
+          let batch = 0;
+          let batchBSize = 0;
+          ` :
+                              `
+          let batch = batchIn;
+          let batchBSize = uniforms.bShape[1] * uniforms.bShape[2];
+          `}
         ${sampleB}
       }
 

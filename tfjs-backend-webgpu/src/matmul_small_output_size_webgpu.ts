@@ -16,8 +16,9 @@
  */
 
 import {backend_util, TensorInfo, util} from '@tensorflow/tfjs-core';
-import {getMainHeaderString} from './shader_preprocessor';
+
 import {mapActivationToShaderProgram} from './activation_util';
+import {getMainHeaderString} from './shader_preprocessor';
 import {WebGPUProgram} from './webgpu_program';
 
 export function makeMatMulSmallOutputSizeSource(
@@ -121,11 +122,13 @@ export class MatMulSmallOutputSizeProgram implements WebGPUProgram {
   dispatchLayout: {x: number[], y: number[], z: number[]};
   dispatch: [number, number, number];
   variableNames = ['A', 'B'];
-  uniforms = `dimAOuter : i32; dimBOuter : i32; dimInner : i32;`;
+  uniforms = `dimAOuter : i32, dimBOuter : i32, dimInner : i32,`;
   workGroupSize: [number, number, number] = [8, 16, 1];
   addBias: boolean;
   activation: backend_util.Activation;
   hasPreluActivationWeights: boolean;
+  batchAEqualOne: boolean;
+  batchBEqualOne: boolean;
 
   constructor(
       aShape: [number, number, number], bShape: [number, number, number],
@@ -158,19 +161,22 @@ export class MatMulSmallOutputSizeProgram implements WebGPUProgram {
     this.addBias = addBias;
     this.activation = activation;
     this.hasPreluActivationWeights = hasPreluActivationWeights;
-    this.shaderKey = `matMulSmallOutputSize_${this.activation}`;
+    this.batchAEqualOne = aShape[0] === 1;
+    this.batchBEqualOne = bShape[0] === 1;
+    this.shaderKey = `matMulSmallOutputSize_${this.activation}_${
+        this.batchAEqualOne}_${this.batchBEqualOne}`;
   }
 
   getUserCode(): string {
     const sampleA =
         `if (coordsInBounds2D(vec2<i32>(row, col), vec2<i32>(uniforms.dimAOuter, uniforms.dimInner))) {
-          return A.numbers[batch * batchASize + row * uniforms.dimInner + col];
+          return A[batch * batchASize + row * uniforms.dimInner + col];
         }
         return 0.0;`;
 
     const sampleB =
         `if (coordsInBounds2D(vec2<i32>(row, col), vec2<i32>(uniforms.dimInner, uniforms.dimBOuter))) {
-           return B.numbers[batch * batchBSize + row * uniforms.dimBOuter + col];
+           return B[batch * batchBSize + row * uniforms.dimBOuter + col];
          }
          return 0.0;`;
 
@@ -193,21 +199,34 @@ export class MatMulSmallOutputSizeProgram implements WebGPUProgram {
       applyActivationSnippet = 'value = activation(value, outCoord);';
     }
 
-    const addBiasSnippet = this.addBias ?
-        'value = value + getBiasByOutputCoords(outCoord);' :
-        '';
+    const addBiasSnippet =
+        this.addBias ? 'value = value + getBiasByOutputCoords(outCoord);' : '';
 
     const userCode = `
       ${activationSnippet}
 
       fn mm_readA(row : i32, col : i32,  globalId : vec3<u32>) -> f32 {
-        let batchASize = uniforms.aShape[1] * uniforms.aShape[2];
-        let batch = i32(globalId.z);
+        ${
+        this.batchAEqualOne ? `
+          let batch = 0;
+          let batchASize = 0;
+          ` :
+                              `
+          let batchASize = uniforms.aShape[1] * uniforms.aShape[2];
+          let batch = i32(globalId.z);
+          `}
         ${sampleA}
       }
       fn mm_readB(row : i32, col : i32,  globalId : vec3<u32>) -> f32 {
-        let batch = i32(globalId.z);
-        let batchBSize = uniforms.bShape[1] * uniforms.bShape[2];
+        ${
+        this.batchBEqualOne ? `
+          let batch = 0;
+          let batchBSize = 0;
+          ` :
+                              `
+          let batch = i32(globalId.z);
+          let batchBSize = uniforms.bShape[1] * uniforms.bShape[2];
+          `}
         ${sampleB}
       }
       fn mm_write(row : i32, col : i32, valueIn : f32, globalId : vec3<u32>) {

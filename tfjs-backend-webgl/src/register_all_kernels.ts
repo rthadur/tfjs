@@ -55,6 +55,7 @@ import {conv3DBackpropInputConfig} from './kernels/Conv3DBackpropInputV2';
 import {cosConfig} from './kernels/Cos';
 import {coshConfig} from './kernels/Cosh';
 import {cropAndResizeConfig} from './kernels/CropAndResize';
+import {cumprodConfig} from './kernels/Cumprod';
 import {cumsumConfig} from './kernels/Cumsum';
 import {denseBincountConfig} from './kernels/DenseBincount';
 import {depthToSpaceConfig} from './kernels/DepthToSpace';
@@ -142,6 +143,7 @@ import {rotateWithOffsetConfig} from './kernels/RotateWithOffset';
 import {roundConfig} from './kernels/Round';
 import {rsqrtConfig} from './kernels/Rsqrt';
 import {scatterNdConfig} from './kernels/ScatterNd';
+import {searchSortedConfig} from './kernels/SearchSorted';
 import {selectConfig} from './kernels/Select';
 import {seluConfig} from './kernels/Selu';
 import {sigmoidConfig} from './kernels/Sigmoid';
@@ -220,6 +222,7 @@ const kernelConfigs: KernelConfig[] = [
   cosConfig,
   coshConfig,
   cropAndResizeConfig,
+  cumprodConfig,
   cumsumConfig,
   denseBincountConfig,
   depthToSpaceConfig,
@@ -307,6 +310,7 @@ const kernelConfigs: KernelConfig[] = [
   roundConfig,
   rsqrtConfig,
   scatterNdConfig,
+  searchSortedConfig,
   selectConfig,
   seluConfig,
   sigmoidConfig,

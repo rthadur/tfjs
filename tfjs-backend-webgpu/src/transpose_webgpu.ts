@@ -15,10 +15,9 @@
  * =============================================================================
  */
 
-import {getCoordsDataType, getMainHeaderAndGlobalIndexString} from './shader_preprocessor';
-import {computeDispatch, flatDispatchLayout} from './webgpu_util';
-
+import {getCoordsDataType, getCoordsXYZ, getMainHeaderAndGlobalIndexString} from './shader_preprocessor';
 import {WebGPUProgram} from './webgpu_program';
+import {computeDispatch, flatDispatchLayout} from './webgpu_util';
 
 export class TransposeProgram implements WebGPUProgram {
   variableNames = ['A'];
@@ -57,7 +56,7 @@ export class TransposeProgram implements WebGPUProgram {
           let flatIndex = index * ${this.workPerThread} + i;
           if(flatIndex < uniforms.size) {
             let resRC = getCoordsFromIndex(flatIndex);
-            setOutputAtIndex(flatIndex, A.numbers[getIndexFromCoords${
+            setOutputAtIndex(flatIndex, A[getIndexFromCoords${
         this.outputShape.length}D(
               ${dtype}(${switched}), uniforms.aShape)]);
           }
@@ -70,12 +69,12 @@ export class TransposeProgram implements WebGPUProgram {
 
 function getSwitchedCoords(newDim: number[]): string {
   const rank = newDim.length;
-  if (rank > 4) {
+  if (rank > 6) {
     throw Error(`Transpose for rank ${rank} is not yet supported`);
   }
   const switchedCoords = new Array(rank);
   for (let i = 0; i < newDim.length; i++) {
-    switchedCoords[newDim[i]] = `resRC[${i}]`;
+    switchedCoords[newDim[i]] = `resRC.${getCoordsXYZ(i)}`;
   }
 
   return switchedCoords.join();
